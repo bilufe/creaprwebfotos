@@ -1,0 +1,15 @@
+{
+  "name": "App Fotos PDF Offline com Legendas",
+  "short_name": "FotosPDF",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "description": "Aplicativo offline para gerar PDF de fotos com jsPDF. Coloque 'jspdf.umd.min.js' na mesma pasta.",
+  "icons": [
+    {
+      "src": "marca-creapr-horizontal-normal-transparente.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
