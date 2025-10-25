@@ -12,7 +12,7 @@
   let previewItems = []; // {file, dataUrl, captionInput}
 
   // compress and convert any image to JPEG with given quality
-  const compressImageToJPEG = (file, quality = 0.5) => {
+  const compressImageToJPEG = (file, quality = 0.4) => {
     return new Promise((resolve, reject) => {
       const img = new Image();
       const reader = new FileReader();
@@ -48,7 +48,7 @@
     statusEl.textContent = `${files.length} imagem(ns) selecionada(s)`;
 
     for (const f of files) {
-      const dataUrl = await compressImageToJPEG(f, 0.5); // 50% de qualidade
+      const dataUrl = await compressImageToJPEG(f, 0.4); // 40% de qualidade
       const div = document.createElement("div");
       div.className = "thumb";
       const img = document.createElement("img");
@@ -90,9 +90,9 @@
     const drawHeader = (doc, reportNumber) => {
       try { doc.addImage(logoData, 'PNG', margin, margin-1, 60, 14, undefined, 'FAST'); } catch(e){}
       doc.setFontSize(13); doc.setFont(undefined, 'bold');
-      doc.text('Relatório de Fiscalização', margin + 68, margin + 6);
+     // doc.text('Relatório de Fiscalização', margin + 68, margin + 6);
       doc.setFontSize(10); doc.setFont(undefined, 'normal');
-      const txt = `Relatório nº ${reportNumber || ''}`;
+      const txt = `Relatório de Fisc. nº ${reportNumber || ''}`;
       const w = doc.getTextWidth(txt);
       doc.text(txt, pageW - margin - w, margin + 6);
       doc.setDrawColor(200); doc.setLineWidth(0.25);
@@ -158,7 +158,7 @@
     for (let p = 1; p <= total; p++) { pdf.setPage(p); drawFooter(pdf, p, total); }
 
     const safeReport = (reportEl.value || 'relatorio').replace(/[^a-zA-Z0-9-_]/g, '_');
-    pdf.save(`Relatorio_Fiscalizacao_${safeReport}.pdf`);
+    pdf.save(`Fotos_Fiscalizacao_${safeReport}.pdf`);
     statusEl.textContent = 'PDF salvo.';
     btn.disabled = false;
   });
