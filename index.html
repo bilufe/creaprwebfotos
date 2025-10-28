@@ -1,155 +1,67 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<title>Relatório de Fiscalização</title>
-<style>
-  body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
-  h1 { text-align: center; }
-  #fotoInput { margin-bottom: 10px; }
-  #fotoList { list-style: none; padding: 0; }
-  #fotoList li { margin: 5px 0; padding: 5px; background: #fff; border: 1px solid #ccc; cursor: grab; display: flex; align-items: center; }
-  #fotoList li.dragging { opacity: 0.5; }
-  #fotoList img { max-height: 80px; margin-right: 10px; }
-  .botao { margin: 5px; padding: 5px 10px; cursor: pointer; }
-  #layoutChoice { margin: 10px 0; }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Relatório de Fiscalização — Gerar PDF</title>
+  <link rel="manifest" href="manifest.json"/>
+  <style>
+    :root{
+      --bg:#f6f8fb;
+      --card:#fff;
+      --border:#e6e9ef;
+      --accent:#0f66d8;
+      --muted:#6b7280;
+      --shadow:0 6px 18px rgba(16,24,40,0.08);
+    }
+    body{font-family:Arial,Helvetica,sans-serif;margin:0;background:var(--bg);color:#111;}
+    .container{max-width:960px;margin:30px auto;padding:20px;}
+    .card{background:var(--card);padding:24px;border-radius:12px;box-shadow:var(--shadow);border:1px solid var(--border);}
+    header{display:flex;align-items:center;gap:14px;margin-bottom:12px;}
+    header img{height:56px;}
+    h1{margin:0;font-size:20px;}
+    p.subtitle{margin:2px 0 0 0;color:var(--muted);}
+    .controls{display:flex;flex-wrap:wrap;gap:12px;margin:14px 0;align-items:center;}
+    .controls input[type=file], .controls input[type=text]{border:1px solid var(--border);border-radius:8px;padding:8px 10px;}
+    .controls input[type=text]{min-width:220px;}
+    .btn{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:10px 14px;cursor:pointer;font-weight:bold;}
+    #preview{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;}
+    .thumb{background:#fff;border:1px solid var(--border);border-radius:8px;padding:6px;width:220px;display:flex;flex-direction:column;gap:8px;}
+    .thumb img{width:100%;border-radius:6px;max-height:140px;object-fit:cover;}
+    .thumb .name{font-size:12px;color:var(--muted);text-align:center;word-break:break-all;}
+    .thumb input.caption{width:100%;box-sizing:border-box;padding:6px;border:1px solid var(--border);border-radius:6px;font-size:13px;}
+    footer{margin-top:14px;color:var(--muted);font-size:13px;display:flex;justify-content:space-between;}
+    .small{font-size:13px;color:var(--muted);}
+  </style>
 </head>
 <body>
+  <div class="container">
+    <div class="card">
+      <header>
+        <img id="logo" src="marca-creapr-horizontal-normal-transparente.png" alt="CREA-PR"/>
+        <div>
+          <h1>Relatório de Fiscalização</h1>
+          <p class="subtitle">Gerador de PDF offline — 2 fotos por página</p>
+        </div>
+      </header>
 
-<h1>Relatório de Fiscalização</h1>
+      <div class="controls">
+        <input id="fileInput" type="file" accept="image/*" multiple />
+        <label class="small">Relatório nº <input id="reportNumber" type="text" value="2025/7-005947-6"/></label>
+        <button id="generate" class="btn">Gerar PDF</button>
+        <span id="status"></span>
+      </div>
 
-<input type="file" id="fotoInput" multiple accept="image/*">
-<ul id="fotoList"></ul>
+      <div id="preview"></div>
+      <footer>
+        <span>Funciona 100% offline</span>
+        <span>CREA-PR</span>
+      </footer>
+    </div>
+  </div>
 
-<div id="layoutChoice">
-  <label>Fotos por página:</label>
-  <select id="fotosPorPagina">
-    <option value="1">1 foto por página</option>
-    <option value="2" selected>2 fotos por página</option>
-  </select>
-</div>
-
-<button class="botao" id="gerarPDF">Gerar PDF</button>
-
-<!-- Biblioteca jsPDF local -->
-<script src="jspdf.umd.min.js"></script>
-
-<script>
-const { jsPDF } = window.jspdf;
-const fotoInput = document.getElementById('fotoInput');
-const fotoList = document.getElementById('fotoList');
-let fotosArray = [];
-
-fotoInput.addEventListener('change', async (e) => {
-  const files = Array.from(e.target.files);
-  for (let file of files) {
-    const compressed = await compressImage(file, 1); // ≤1MB
-    const src = URL.createObjectURL(compressed);
-    fotosArray.push({ file: compressed, src });
-    renderFotos();
-  }
-  fotoInput.value = '';
-});
-
-function renderFotos() {
-  fotoList.innerHTML = '';
-  fotosArray.forEach((foto, index) => {
-    const li = document.createElement('li');
-    li.draggable = true;
-    li.dataset.index = index;
-    li.innerHTML = `<img src="${foto.src}"><span>Foto ${index+1}</span>`;
-    fotoList.appendChild(li);
-  });
-}
-
-// Drag & drop
-let draggingIndex = null;
-fotoList.addEventListener('dragstart', e => {
-  draggingIndex = e.target.dataset.index;
-  e.target.classList.add('dragging');
-});
-fotoList.addEventListener('dragend', e => e.target.classList.remove('dragging'));
-fotoList.addEventListener('dragover', e => e.preventDefault());
-fotoList.addEventListener('drop', e => {
-  e.preventDefault();
-  const target = e.target.closest('li');
-  if (!target || target.dataset.index === draggingIndex) return;
-  const from = draggingIndex;
-  const to = target.dataset.index;
-  const movedItem = fotosArray.splice(from,1)[0];
-  fotosArray.splice(to,0,movedItem);
-  renderFotos();
-});
-
-// Compressão para ≤ 1 MB
-function compressImage(file, maxMB) {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = e => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img,0,0);
-        let quality = 0.9;
-        let dataUrl = canvas.toDataURL('image/jpeg', quality);
-        while (dataUrl.length/1024/1024 > maxMB && quality > 0.1) {
-          quality -= 0.05;
-          dataUrl = canvas.toDataURL('image/jpeg', quality);
-        }
-        fetch(dataUrl).then(r => r.blob()).then(blob => resolve(blob));
-      };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
-// Gerar PDF
-document.getElementById('gerarPDF').addEventListener('click', async () => {
-  const pdf = new jsPDF({unit:'pt', format:'a4'});
-  const fotosPorPagina = parseInt(document.getElementById('fotosPorPagina').value);
-  const pageWidth = pdf.internal.pageSize.getWidth() - 40;
-  const pageHeight = pdf.internal.pageSize.getHeight() - 60;
-  const margin = 20;
-  let y = margin;
-  let fotoCount = 0;
-  for (let i=0;i<fotosArray.length;i++){
-    const file = fotosArray[i].file;
-    const img = await fileToImage(file);
-    const ratio = Math.min(pageWidth, pageHeight/(fotosPorPagina)) / Math.max(img.width,img.height);
-    const w = img.width * ratio;
-    const h = img.height * ratio;
-    if (fotoCount>0 && fotoCount%fotosPorPagina===0) {
-      pdf.addPage();
-      y = margin;
-    }
-    pdf.addImage(img, 'JPEG', (pageWidth-w)/2+margin, y, w, h);
-    y += h + 10;
-    fotoCount++;
-  }
-  // Rodapé
-  const pageCount = pdf.getNumberOfPages();
-  for (let p=1;p<=pageCount;p++){
-    pdf.setPage(p);
-    pdf.setFontSize(10);
-    pdf.text('Fotos da data da fiscalização', pageWidth/2 + margin, pageHeight + 30, {align:'center'});
-    pdf.text(`Página ${p} de ${pageCount}`, pageWidth - margin, pageHeight + 30, {align:'right'});
-  }
-  pdf.save('relatorio.pdf');
-});
-
-function fileToImage(file){
-  return new Promise(resolve => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.src = URL.createObjectURL(file);
-  });
-}
-</script>
-
+  <!-- Local jsPDF required: place jspdf.umd.min.js in same folder -->
+  <script src="jspdf.umd.min.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
