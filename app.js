@@ -1,7 +1,10 @@
-/* app.js (versão 2)
+/* app.js (versão 3)
    - Ajusta o tamanho das imagens no PDF
    - Permite escolher 1 ou 2 fotos por página
+   - Adiciona bordas às imagens
+   - Corrige posição das legendas (sem sobreposição)
 */
+
 const gallery = document.getElementById('gallery');
 const fileInput = document.getElementById('fileInput');
 const generatePdfBtn = document.getElementById('generatePdf');
@@ -116,65 +119,59 @@ async function generateWithJsPDF(reportNumber, jsPDFClass, photosPerPage){
   const doc = new jsPDFClass({unit:'mm', format:'a4'});
   const pageW = 210, pageH = 297;
   const margin = 12;
-  const headerHeight = 10;
-  const footerHeight = 8;
-  const captionSpace = 10; // espaço reservado abaixo da imagem
   const usableW = pageW - margin*2;
-  const usableH = pageH - margin*2 - headerHeight - footerHeight;
+  const usableH = pageH - margin*2 - 20;
   const dateStr = new Date().toLocaleDateString();
 
   function addHeaderFooter(pdf){
     pdf.setFontSize(10);
-    pdf.text(`Fotografias do Relatório de Fiscalização nº ${reportNumber}`, margin, margin);
+    pdf.text(`Fotografias do Relatório de Fiscalização nº ${reportNumber}`, margin, 10);
     pdf.setFontSize(8);
-    pdf.text(`${dateStr}`, margin, pageH - margin + 2);
+    pdf.text(`${dateStr}`, margin, pageH - 6);
   }
 
   const perPage = photosPerPage === 1 ? 1 : 2;
-
   for(let i=0;i<items.length;i+=perPage){
     if(i>0) doc.addPage();
     addHeaderFooter(doc);
 
-    const slotTotalH = usableH / perPage;
-
     for(let col=0; col<perPage; col++){
-      const idx = i + col;
+      const idx = i+col;
       if(idx >= items.length) break;
       const item = items[idx];
       const blob = await compressImageDataUrl(item.dataUrl, 1_000_000);
       const dataUrl = await blobToDataURL(blob);
       const img = await loadImage(dataUrl);
 
-      // Calcula o espaço para a imagem (deixando espaço para legenda)
-      const imageAreaH = slotTotalH - captionSpace;
+      // Calcula o espaço disponível por imagem
+      const slotH = (usableH / perPage) - (perPage===2?8:0);
+      const slotW = usableW;
       const x = margin;
-      const y = margin + headerHeight + col * slotTotalH;
+      const y = margin + 12 + col*(slotH + 20); // espaço entre imagens aumentado
 
-      // Ajuste de proporção
-      const ratio = Math.min(usableW / img.width, imageAreaH / img.height);
+      // Ajusta a proporção
+      const ratio = Math.min(slotW/img.width, slotH/img.height);
       const wmm = img.width * ratio;
       const hmm = img.height * ratio;
-      const xpos = x + (usableW - wmm) / 2;
-      const ypos = y + (imageAreaH - hmm) / 2;
-
-      // Adiciona imagem
-      doc.addImage(dataUrl, 'JPEG', xpos, ypos, wmm, hmm, undefined, 'FAST');
+      const xpos = x + (slotW - wmm)/2;
+      const ypos = y + (slotH - hmm)/2 - 5; // leve ajuste vertical
 
       // Desenha borda em volta da imagem
       doc.setDrawColor(0);
       doc.setLineWidth(0.3);
       doc.rect(xpos, ypos, wmm, hmm);
 
+      // Insere imagem
+      doc.addImage(dataUrl, 'JPEG', xpos, ypos, wmm, hmm, undefined, 'FAST');
+
       // Adiciona legenda logo abaixo da imagem
-      const captionY = y + imageAreaH + 5;
-      doc.setFontSize(9);
-      doc.text(item.caption || ' ', margin + 2, captionY, {maxWidth: usableW - 4});
+      const captionY = ypos + hmm + 6; // 6 mm abaixo
+      doc.setFontSize(10);
+      doc.setTextColor(40);
+      doc.text(item.caption || ' ', margin+2, captionY, {maxWidth: usableW-4});
     }
   }
-
-  const outName = `Fotos_Relatorio_${reportNumber.replace(/\s+/g,'_') || 'relatorio'}.pdf`
-    .replace(/[:\\/\\?<>\\*|"]/g,'_');
+  const outName = `Fotos_Relatorio_${reportNumber.replace(/\s+/g,'_') || 'relatorio'}.pdf`.replace(/[:\/\?<>\*|"]/g,'_');
   doc.save(outName);
 }
 
