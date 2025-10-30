@@ -1,67 +1,52 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Relatório de Fiscalização — Gerar PDF</title>
-  <link rel="manifest" href="manifest.json"/>
-  <style>
-    :root{
-      --bg:#f6f8fb;
-      --card:#fff;
-      --border:#e6e9ef;
-      --accent:#0f66d8;
-      --muted:#6b7280;
-      --shadow:0 6px 18px rgba(16,24,40,0.08);
-    }
-    body{font-family:Arial,Helvetica,sans-serif;margin:0;background:var(--bg);color:#111;}
-    .container{max-width:960px;margin:30px auto;padding:20px;}
-    .card{background:var(--card);padding:24px;border-radius:12px;box-shadow:var(--shadow);border:1px solid var(--border);}
-    header{display:flex;align-items:center;gap:14px;margin-bottom:12px;}
-    header img{height:56px;}
-    h1{margin:0;font-size:20px;}
-    p.subtitle{margin:2px 0 0 0;color:var(--muted);}
-    .controls{display:flex;flex-wrap:wrap;gap:12px;margin:14px 0;align-items:center;}
-    .controls input[type=file], .controls input[type=text]{border:1px solid var(--border);border-radius:8px;padding:8px 10px;}
-    .controls input[type=text]{min-width:220px;}
-    .btn{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:10px 14px;cursor:pointer;font-weight:bold;}
-    #preview{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;}
-    .thumb{background:#fff;border:1px solid var(--border);border-radius:8px;padding:6px;width:220px;display:flex;flex-direction:column;gap:8px;}
-    .thumb img{width:100%;border-radius:6px;max-height:140px;object-fit:cover;}
-    .thumb .name{font-size:12px;color:var(--muted);text-align:center;word-break:break-all;}
-    .thumb input.caption{width:100%;box-sizing:border-box;padding:6px;border:1px solid var(--border);border-radius:6px;font-size:13px;}
-    footer{margin-top:14px;color:var(--muted);font-size:13px;display:flex;justify-content:space-between;}
-    .small{font-size:13px;color:var(--muted);}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Gerador de PDF - Fotografias do Relatório</title>
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="container">
-    <div class="card">
-      <header>
-        <img id="logo" src="marca-creapr-horizontal-normal-transparente.png" alt="CREA-PR"/>
-        <div>
-          <h1>Relatório de Fiscalização</h1>
-          <p class="subtitle">Gerador de PDF offline — 2 fotos por página</p>
-        </div>
-      </header>
-
-      <div class="controls">
-        <input id="fileInput" type="file" accept="image/*" multiple />
-        <label class="small">Relatório nº <input id="reportNumber" type="text" value="2025/7-005947-6"/></label>
-        <button id="generate" class="btn">Gerar PDF</button>
-        <span id="status"></span>
-      </div>
-
-      <div id="preview"></div>
-      <footer>
-        <span>Funciona 100% offline</span>
-        <span>CREA-PR</span>
-      </footer>
+<header>
+  <h1>Gerador de Fotografias do Relatório</h1>
+</header>
+<main>
+  <section class="controls">
+    <label class="file-btn">
+      Selecionar imagens
+      <input type="file" id="fileInput" accept="image/*" multiple capture="environment">
+    </label>
+    <div class="inline">
+      <label> Nº do Relatório: <input id="reportNumber" placeholder="xxxx/7-xxxxxx-x"></label>
+      <label>Fotos por página:
+        <select id="photosPerPage">
+          <option value="2" selected>2</option>
+          <option value="1">1</option>
+        </select>
+      </label>
+      <button id="generatePdf">Gerar PDF</button>
     </div>
-  </div>
+  </section>
 
-  <!-- Local jsPDF required: place jspdf.umd.min.js in same folder -->
-  <script src="jspdf.umd.min.js"></script>
-  <script src="script.js"></script>
+  <section id="gallery"></section>
+</main>
+
+<footer>
+  <small>App offline – todos os scripts rodam localmente (é necessário colocar a lib PDF em /libs se desejar modo totalmente offline).</small>
+</footer>
+
+<!-- Local or CDN libraries -->
+<script>
+  (function(){
+    function loadScript(src, onload){
+      var s=document.createElement('script'); s.src=src; s.onload=onload; s.onerror=function(){console.warn('Falha ao carregar',src);};
+      document.head.appendChild(s);
+    }
+    loadScript('./libs/jspdf.umd.min.js', function(){ console.log('jsPDF local carregado'); });
+    loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.3/jspdf.umd.min.js', function(){ console.log('jsPDF CDN carregado'); });
+  })();
+</script>
+
+<script src="app.js"></script>
 </body>
 </html>
