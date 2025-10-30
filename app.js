@@ -116,49 +116,65 @@ async function generateWithJsPDF(reportNumber, jsPDFClass, photosPerPage){
   const doc = new jsPDFClass({unit:'mm', format:'a4'});
   const pageW = 210, pageH = 297;
   const margin = 12;
+  const headerHeight = 10;
+  const footerHeight = 8;
+  const captionSpace = 10; // espaço reservado abaixo da imagem
   const usableW = pageW - margin*2;
-  const usableH = pageH - margin*2 - 20;
+  const usableH = pageH - margin*2 - headerHeight - footerHeight;
   const dateStr = new Date().toLocaleDateString();
 
   function addHeaderFooter(pdf){
     pdf.setFontSize(10);
-    pdf.text(`Fotografias do Relatório de Fiscalização nº ${reportNumber}`, margin, 10);
+    pdf.text(`Fotografias do Relatório de Fiscalização nº ${reportNumber}`, margin, margin);
     pdf.setFontSize(8);
-    pdf.text(`${dateStr}`, margin, pageH - 6);
+    pdf.text(`${dateStr}`, margin, pageH - margin + 2);
   }
 
   const perPage = photosPerPage === 1 ? 1 : 2;
+
   for(let i=0;i<items.length;i+=perPage){
     if(i>0) doc.addPage();
     addHeaderFooter(doc);
+
+    const slotTotalH = usableH / perPage;
+
     for(let col=0; col<perPage; col++){
-      const idx = i+col;
+      const idx = i + col;
       if(idx >= items.length) break;
       const item = items[idx];
       const blob = await compressImageDataUrl(item.dataUrl, 1_000_000);
       const dataUrl = await blobToDataURL(blob);
       const img = await loadImage(dataUrl);
 
-      // Calcula o espaço por imagem
-      let slotH = (usableH / perPage) - (perPage===2?8:0);
-      let slotW = usableW;
+      // Calcula o espaço para a imagem (deixando espaço para legenda)
+      const imageAreaH = slotTotalH - captionSpace;
       const x = margin;
-      const y = margin + 12 + col*(slotH + 12);
+      const y = margin + headerHeight + col * slotTotalH;
 
-      // Ajusta proporção para preencher o quadro (mantendo borda mínima)
-      const ratio = Math.min(slotW/img.width, slotH/img.height);
+      // Ajuste de proporção
+      const ratio = Math.min(usableW / img.width, imageAreaH / img.height);
       const wmm = img.width * ratio;
       const hmm = img.height * ratio;
-      const xpos = x + (slotW - wmm)/2;
-      const ypos = y + (slotH - hmm)/2;
+      const xpos = x + (usableW - wmm) / 2;
+      const ypos = y + (imageAreaH - hmm) / 2;
 
-      // Insere imagem e legenda
+      // Adiciona imagem
       doc.addImage(dataUrl, 'JPEG', xpos, ypos, wmm, hmm, undefined, 'FAST');
+
+      // Desenha borda em volta da imagem
+      doc.setDrawColor(0);
+      doc.setLineWidth(0.3);
+      doc.rect(xpos, ypos, wmm, hmm);
+
+      // Adiciona legenda logo abaixo da imagem
+      const captionY = y + imageAreaH + 5;
       doc.setFontSize(9);
-      doc.text(item.caption || ' ', margin+2, y + slotH - 3, {maxWidth: usableW-4});
+      doc.text(item.caption || ' ', margin + 2, captionY, {maxWidth: usableW - 4});
     }
   }
-  const outName = `Fotos_Relatorio_${reportNumber.replace(/\s+/g,'_') || 'relatorio'}.pdf`.replace(/[:\/\?<>\*|"]/g,'_');
+
+  const outName = `Fotos_Relatorio_${reportNumber.replace(/\s+/g,'_') || 'relatorio'}.pdf`
+    .replace(/[:\\/\\?<>\\*|"]/g,'_');
   doc.save(outName);
 }
 
