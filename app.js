@@ -154,9 +154,6 @@ async function generateWithJsPDF(reportNumber, jsPDFClass, photosPerPage){
 
       // Insere imagem e legenda
       doc.addImage(dataUrl, 'JPEG', xpos, ypos, wmm, hmm, undefined, 'FAST');
-      doc.setDrawColor(0);
-      doc.setLineWidth(0.5);
-      doc.rect(x, y, w, h);
       doc.setFontSize(9);
       doc.text(item.caption || ' ', margin+2, y + slotH - 3, {maxWidth: usableW-4});
     }
